@@ -1,0 +1,11 @@
+
+use_gpu: true
+save_masks: true
+image_extension: ".jpg"
+device: "cuda"  # Options: "cuda", "cpu", "mps"
+
+# Paths
+data_dir: "./data/images"
+image_dir: "./data/images"
+model_dir: "../models/cellpose_model.pth"
+output_dir: "../masks"

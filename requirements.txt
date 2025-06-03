@@ -1,0 +1,5 @@
+cellpose
+numpy
+matplotlib
+torch
+pyyaml

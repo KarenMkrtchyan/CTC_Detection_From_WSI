@@ -1,11 +1,13 @@
-
-use_gpu: true
+use_gpu: true 
 save_masks: true
 image_extension: ".jpg"
 device: "cuda"  # Options: "cuda", "cpu", "mps"
 
 # Paths
-data_dir: "./data/images"
-image_dir: "./data/images"
-model_dir: "../models/cellpose_model.pth"
-output_dir: "../masks"
+data_dir: "./sample_data/raw" # Raw data images dir path
+model_dir: "../models/cellpose_model" # Pretrained cellpose model path, setting this to an invalid path defaults cellpose to CPSAM
+output_dir: "../masks" # Path to output dir for masks
+
+
+# Tells us how to combine the 4 different images into 1
+offset: 2304

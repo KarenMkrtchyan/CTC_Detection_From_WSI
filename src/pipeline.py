@@ -4,16 +4,19 @@ from Segmenter_Module import Segmenter
 
 def main():
     # Load configuration from YAML file
-    with open('config.yaml', 'r') as file:
+    with open(Path('./src/config.yaml'), 'r') as file:
         config = yaml.safe_load(file)
-    image_dir = Path('./data/images')
-    model = Segmenter(pretrained_model=config['model_dir'], 
+    model = Segmenter(
+                      pretrained_model=config['model_dir'], 
+                    # pretrained_model="cpsam",
                       device=config['device'], 
                       data_dir=config['data_dir'],
                       image_extension=config['image_extension'],
-                      output_dir=config['output_dir']
+                      output_dir=config['output_dir'],
+                      offset=config['offset']
                       )
-    model.segment_frames(image_dir)
+    
+    model.segment_frames(Path(config['data_dir']))
 
 if __name__ == "__main__":
     main()

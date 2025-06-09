@@ -1,5 +1,4 @@
-cellpose segmentation model
-
+Segmentation model 
 
 # Conda env
 conda create --name cellpose python=3.10

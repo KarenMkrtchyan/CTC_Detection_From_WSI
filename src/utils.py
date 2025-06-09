@@ -3,17 +3,21 @@ import numpy as np
 def combine_slices(image0, image1, image2, image3):
     """
     Combine four grayscale images into a single 3-channel BGR image.
-    
-    
+
+    :param image0: DAPI
+    :param image1: PanCK
+    :param image2: CD45/31
+    :param image3: VIM
+
     :return: Combined BGR image as a numpy array.
     """
-    brg = np.zeros((image1.shape[0], image1.shape[1], 3))
+    brg = np.zeros((image1.shape[0], image1.shape[1], 3), dtype=np.uint8)\
 
     for i in range(len(brg)):
         for j in range(len(brg[0])):
-            brg[i,j,0] = image0[i,j] + image3[i,j] # [0, 3], [2, 3], [1, 3]
-            brg[i,j,1] = image2[i,j] + image3[i,j]
-            brg[i,j,2] = image1[i,j] + image3[i,j]
+            brg[i,j,0] = np.uint8(image0[i,j] + image3[i,j]) if image0[i,j] + image3[i,j] < 255 else 255 # hardcoded uint8 max value
+            brg[i,j,1] = np.uint8(image2[i,j] + image3[i,j]) if image2[i,j] + image3[i,j] < 255 else 255 
+            brg[i,j,2] = np.uint8(image1[i,j] + image3[i,j]) if image1[i,j] + image3[i,j] < 255 else 255 
 
     return brg
 
@@ -21,7 +25,7 @@ def channels_to_bgr(image, blue_index, green_index, red_index):
     """
     Convert image channels to BGR 3-color format for visualization.
     
-    :param image: Input image as numpy array with shape (H, W, C) or (1, H, W, C).
+    :param image: Input image as numpy array with shape (Height, Width, Channels)
     :param blue_index: List of indices for blue channels in the image.
     :param green_index: List of indices for green channels in the image.
     :param red_index: List of indices for red channels in the image.
@@ -54,3 +58,18 @@ def channels_to_bgr(image, blue_index, green_index, red_index):
 
     return bgr
 
+def get_composite(dapi, ck, cd45, fitc):
+    dtype = dapi.dtype
+    max_val = np.iinfo(dapi.dtype).max
+    dapi = dapi.astype(np.float32)
+    ck = ck.astype(np.float32)
+    cd45 = cd45.astype(np.float32)
+    fitc = fitc.astype(np.float32)
+    rgb = np.zeros((dapi.shape[0], dapi.shape[1], 3),
+                   dtype='float')
+    rgb[...,0] = ck+fitc
+    rgb[...,1] = cd45+fitc
+    rgb[...,2] = dapi.astype(np.float32)+fitc
+    rgb[rgb > max_val] = max_val
+    rgb = rgb.astype(dtype)
+    return rgb

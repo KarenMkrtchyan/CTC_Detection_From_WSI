@@ -13,7 +13,8 @@ def main():
                       data_dir=config['data_dir'],
                       image_extension=config['image_extension'],
                       output_dir=config['output_dir'],
-                      offset=config['offset']
+                      offset=config['offset'],
+                      save_masks=config['save_masks']
                       )
     
     model.segment_frames(Path(config['data_dir']))

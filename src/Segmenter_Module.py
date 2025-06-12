@@ -1,24 +1,29 @@
 import torch
-from cellpose import models, core, io, plot
+from cellpose import models, core, io
 from pathlib import Path
 import matplotlib.pyplot as plt
-# from utils import get_composite 
+import os
 import numpy as np
 from skimage.util import img_as_ubyte
+import cv2
+
+# DONT USE IO
 
 class Segmenter:
     def __init__(self, pretrained_model, 
                  device, data_dir, image_extension,
-                 output_dir, offset):     
-        io.logger_setup() # Prints progress 
-        io.logging.warning("Initializing Segmenter")
+                 output_dir, offset, save_masks):    
+        
+        io.logger_setup() # Prints progress bar when cellpose is running  
+        print("\n🤫 Initializing Segmenter  Module")
         self.config = Config(
             pretrained_model=pretrained_model,
             device=device,
             data_dir=data_dir,
             image_extension=image_extension,
             mask_output_dir=output_dir,
-            offset=offset
+            offset=offset,
+            save_masks=save_masks
         )
         # Everything must be correctly initialized before Segmenter can be used
         if core.use_gpu() == False:
@@ -31,36 +36,49 @@ class Segmenter:
             raise ValueError("Pretrained model must be specified")
       
         self.model = models.CellposeModel(gpu = True, 
-                                          pretrained_model=self.config.pretrained_model, 
+                                          pretrained_model=str(self.config.pretrained_model), 
                                           device=torch.device(self.config.device))
 
     def load_images(self, image_dir):
-        filenames = image_files = io.get_image_files(
-            folder=str(image_dir),  # Convert Path object to string
-            mask_filter= "_mask",
-        ) 
+        """Load images from the specified directory, and return a list of images as numpy arrays."""
+        image_files = sorted(os.listdir(image_dir)) # list index must match the order of scans 
+
         frames = []
         for image_file in image_files:
-            image = io.imread(image_file)
+            image = cv2.imread(Path(image_dir, image_file), cv2.IMREAD_GRAYSCALE)
+            image = image.astype(np.float32)
+            image = image * 255 # convert from 8-bit to 16-bit
+            image = image.astype(np.uint16) # convert to 16-bit unsigned integer
             frames.append(image)
 
-        return frames, filenames
+        return np.array(frames, dtype=np.uint16)
     
     def get_composite(self, dapi, ck, cd45, fitc):
+
         dtype = dapi.dtype
         max_val = np.iinfo(dapi.dtype).max
+
         dapi = dapi.astype(np.float32)
         ck = ck.astype(np.float32)
         cd45 = cd45.astype(np.float32)
         fitc = fitc.astype(np.float32)
-        rgb = np.zeros((dapi.shape[0], dapi.shape[1], 3),
-                    dtype='float')
+
+        rgb = np.zeros((dapi.shape[0], dapi.shape[1], 3), dtype='float')
+        
         rgb[...,0] = ck+fitc
         rgb[...,1] = cd45+fitc
-        rgb[...,2] = dapi.astype(np.float32)+fitc
+        rgb[...,2] = dapi.astype(np.float32)+fitc 
         rgb[rgb > max_val] = max_val
+
         rgb = rgb.astype(dtype)
         return rgb
+    
+    def save_masks(self, masks):
+        if not self.config.mask_output_dir.exists():
+            self.config.mask_output_dir.mkdir(parents=True, exist_ok=True)
+        for i, mask in enumerate(masks):
+            mask_path = Path(self.config.mask_output_dir, f"mask_{i}.png")
+            cv2.imwrite(mask_path, mask.astype(np.uint8))
 
     def combine_images(self, images):
         frames=[]
@@ -71,72 +89,36 @@ class Segmenter:
             image2 = images[i+2*offset]
             # skip Bright Field scan
             image3 = images[i+3*offset] 
+            frames.append(img_as_ubyte(self.get_composite(image0, image1, image2, image3)))  
 
-            # FOR DEBUGGING:
-            # Visualize the 4 images being before they are combined
-            # plt.figure(figsize=(10, 10))
-            # plt.subplot(2, 2, 1)
-            # plt.imshow(image0, cmap='gray' if len(image0.shape) == 2 else None)
-            # plt.title(f"Image {i} (Scan 0)")
-            # plt.axis('off')  # Hide axes for better visualization
-            # plt.subplot(2, 2, 2)
-            # plt.imshow(image1, cmap='gray' if len(image1.shape) == 2 else None)
-            # plt.title(f"Image {i+offset} (Scan 1)")
-            # plt.axis('off')
-            # plt.subplot(2, 2, 3)
-            # plt.imshow(image2, cmap='gray' if len(image2.shape) == 2 else None)
-            # plt.title(f"Image {i+2*offset} (Scan 2)")
-            # plt.axis('off')
-            # plt.subplot(2, 2, 4)
-            # plt.imshow(image3, cmap='gray' if len(image3.shape) == 2 else None)
-            # plt.title(f"Image {i+4*offset} (Scan 3)")
-            # plt.axis('off')
-            # plt.tight_layout()
-            # plt.show()  # Show the images without blocking execution
-
-            final = self.get_composite(image0, image1, image2, image3)
-            
-            # Show image after combining
-            # plt.imshow(final)
-            # plt.title(f"Combining Images {i}, {i+offset}, {i+2*offset}, {i+4*offset}")
-            # plt.axis('off') 
-            
-            frames.append(img_as_ubyte(final))
-            
         return frames
     
-    def segment_frames(self, image_dir):
-        print("\nSegmenting frames in directory:", image_dir)
-        images, filenames = self.load_images(image_dir) # TODO: Run this on multiple cores
+    def segment_frames(self, frames):
+        return self.model.eval(frames,diameter=15,channels=[0, 0])
+    
+    def run(self, image_dir):
+        print("\n📠 Segmenting frames in directory:", image_dir)
+        images = self.load_images(image_dir) # TODO: Run this on multiple cores
 
-        print("\nCombining 4 scans into 1 image ...")
+        print("\n📠 Combining 4 scans into 1 image ...")
         frames=self.combine_images(images)
 
-        print("\nComputing masks ...")
-        # flush mem per cycle 
-        # more sample data, see if models can't find cells in all the slides
-        masks, flows, styles = self.model.eval(frames, 
-                                               diameter=15,
-                                               channels=[0, 0],
-                                               )
-        
-        print("\nSaving the masks ...")
-        io.save_masks(
-            images=frames,
-            masks=masks,
-            flows=flows,
-            file_names=filenames[0:10], # Set to 5 for sample run, or self.config.offset for full data run
-            savedir=self.config.mask_output_dir,
-        )
-        print("\nMasks saved to:", self.config.mask_output_dir)
+        print("\n📠 Computing masks ...")
+        masks, flows, styles = self.segment_frames(frames)
 
-        return masks, flows, styles
+        if(self.config.save_masks):
+            print("\n📠 Saving the masks ...")
+            self.save_masks(masks)
+        
+        return masks
 
 class Config:
-    def __init__(self, pretrained_model, device, data_dir, image_extension, mask_output_dir, offset):
+    def __init__(self, pretrained_model, device, data_dir, image_extension, mask_output_dir, offset,
+                 save_masks):
         self.pretrained_model = Path(pretrained_model)
         self.device = device
         self.data_dir = Path(data_dir)
         self.image_extension = image_extension
         self.mask_output_dir = Path(mask_output_dir)
         self.offset = offset
+        self.save_masks = save_masks

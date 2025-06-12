@@ -1,5 +1,5 @@
-cellpose
-numpy
-matplotlib
-torch
-pyyaml
+cellpose ==3.1.1.1
+numpy==1.22.4
+matplotlib==3.5.1
+torch==2.3.0
+pyyaml==6.0.2

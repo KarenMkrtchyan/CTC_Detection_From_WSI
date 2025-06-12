@@ -78,7 +78,7 @@ class Segmenter:
             self.config.mask_output_dir.mkdir(parents=True, exist_ok=True)
         for i, mask in enumerate(masks):
             mask_path = Path(self.config.mask_output_dir, f"mask_{i}.png")
-            cv2.imwrite(mask_path, mask.astype(np.uint8))
+            cv2.imwrite(mask_path, mask.astype(np.uint16))
 
     def combine_images(self, images):
         frames=[]
@@ -89,7 +89,7 @@ class Segmenter:
             image2 = images[i+2*offset]
             # skip Bright Field scan
             image3 = images[i+3*offset] 
-            frames.append(img_as_ubyte(self.get_composite(image0, image1, image2, image3)))  
+            frames.append(self.get_composite(image0, image1, image2, image3))  
 
         return frames
     

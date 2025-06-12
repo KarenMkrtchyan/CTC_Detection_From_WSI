@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 
 # Input and output directories
-input_dir = Path("../masks")
-output_dir = Path("../masks_binary")
+input_dir = Path("./masks")
+output_dir = Path("./masks_binary")
 
 # Create the output directory if it doesn't exist
 output_dir.mkdir(parents=True, exist_ok=True)

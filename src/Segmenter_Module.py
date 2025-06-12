@@ -1,13 +1,10 @@
 import torch
 from cellpose import models, core, io
 from pathlib import Path
-import matplotlib.pyplot as plt
 import os
 import numpy as np
-from skimage.util import img_as_ubyte
 import cv2
-
-# DONT USE IO
+import matplotlib.pyplot as plt # use in debug console 
 
 class Segmenter:
     def __init__(self, pretrained_model, 
@@ -46,12 +43,13 @@ class Segmenter:
         frames = []
         for image_file in image_files:
             image = cv2.imread(Path(image_dir, image_file), cv2.IMREAD_GRAYSCALE)
-            image = image.astype(np.float32)
-            image = image * 255 # convert from 8-bit to 16-bit
-            image = image.astype(np.uint16) # convert to 16-bit unsigned integer
+            image = (image*257).astype(np.uint16)  # Convert 8-bit to 16-bit
+            # image = image.astype(np.float32)
+            # image = image * 255 # convert from 8-bit to 16-bit
+            # image = image.astype(np.uint16) # convert to 16-bit unsigned integer
             frames.append(image)
 
-        return np.array(frames, dtype=np.uint16)
+        return np.array(frames, dtype=np.uint16) # and if i wasn't clear its 16 bit
     
     def get_composite(self, dapi, ck, cd45, fitc):
 
@@ -68,7 +66,7 @@ class Segmenter:
         rgb[...,0] = ck+fitc
         rgb[...,1] = cd45+fitc
         rgb[...,2] = dapi.astype(np.float32)+fitc 
-        rgb[rgb > max_val] = max_val
+        rgb[rgb > max_val] = max_val # Clips overflow 
 
         rgb = rgb.astype(dtype)
         return rgb

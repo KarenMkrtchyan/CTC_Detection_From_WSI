@@ -1,6 +1,5 @@
-# Segmentation model 
-
-Module for loading in microscopy images and segmenting them through cellpose for feature extraction 
+# Ml pipeline prototypes for CSI-Cancer 
+Modules for loading in microscopy images, segmenting them, and extractinb features  
 
 ## Conda env
 conda create --name cellpose python=3.10

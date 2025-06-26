@@ -31,6 +31,7 @@ class Segmenter:
 
         if self.config.pretrained_model is None:
             raise ValueError("Pretrained model must be specified")
+            # then load cellpose cpsam
       
         self.model = models.CellposeModel(gpu = True, 
                                           pretrained_model=str(self.config.pretrained_model), 
@@ -92,7 +93,7 @@ class Segmenter:
         return frames
     
     def segment_frames(self, frames):
-        return self.model.eval(frames,diameter=15,channels=[0, 0])
+        return self.model.eval(frames,diameter=15,channels=[0, 0]) # test if pasing all the frames at once or one at a time is faster 
     
     def run(self, image_dir):
         print("\n📠 Segmenting frames in directory:", image_dir)

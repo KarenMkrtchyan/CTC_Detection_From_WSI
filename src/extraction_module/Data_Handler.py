@@ -31,19 +31,28 @@ class CustomImageDataset(Dataset):
             labels (np.ndarray): Array of integer labels for each image.
             tran (bool): If True, applies transformations during data loading.
         """
-        dapi = images[:offset]
+
+        # image - > 5 channels: dapi, ck, cd45, fitc, mask with shape  (N, 4, 75, 75).
+        offset = 10 # For sample data 
+        dapi = images[:offset] # these are all curently 10044*1362
         ck = images[offset:2*offset]
         cd45 = images[2*offset:3*offset]
         fitc = images[3*offset:4*offset]
-        self.images = np.stack((dapi, ck, cd45, fitc), axis=0)
-        self.masks = masks
+        self.images = np.stack((dapi, ck, cd45, fitc), axis=1)
+
+        self.masks = np.zeros((masks.shape[0], 1, masks.shape[1], masks.shape[2])) # Masks should be of shape (N, 1, 75, 75) how would i get 75? 
+        self.masks[:, 0, :, :] = masks  
         self.labels = labels
         self.tran = tran
 
         # Transformation pipeline: Convert numpy arrays to PyTorch tensors
         self.t = transforms.Compose([
-            transforms.ToTensor()
+            transforms.ToTensor()  # Converts H*W*C numpy array to C*H*W tensor
         ])
+
+        # self.t = transforms.Compose([
+        #     torch.from_numpy() # Woudlnt need to flip the image before passing but gives an error
+        # ])
 
     def __len__(self):
         """
@@ -68,15 +77,20 @@ class CustomImageDataset(Dataset):
         """
         # Normalize the image to the range [0, 1]
         image = self.images[idx].astype(np.float32) / 65535.0
-        
+        # image = np.transpose(image, (2, 0, 1)) # ruin a perfectly good H W C to C H W so it can be moved back later 
+
         # Retrieve the corresponding label and mask
         label = self.labels[idx]
         mask = self.masks[idx].astype(np.int16)
+        # mask = np.transpose(mask, (2,0,1))
 
         # Apply transformation to convert to tensor
-        image = self.t(image)
-        mask = self.t(mask)
+        # image = self.t(image)
+        # mask = self.t(mask)
 
+        image = torch.from_numpy(image)
+        mask = torch.from_numpy(mask)
+        
         # Create a masked version of the image by multiplying with the binary mask
         hard_masked_image = image * mask
 

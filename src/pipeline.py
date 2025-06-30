@@ -36,11 +36,18 @@ def main():
 
     print("\n📠 Computing masks ...")
     masks, flows, styles = segmentor_model.segment_frames(frames)
+    masks = np.array(masks)
+
+    # Crop
+    print("\n📠 Cropping images ...")
+    crops = segmentor_model.get_cell_crops(masks, frames)
 
     print("\n📠 Doing all the data loader nonsense ...")
     # image - > 5 channels: dapi, ck, cd45, fitc, mask 
     dataset = CustomImageDataset(images, masks, labels=np.zeros(images.shape[0]), tran=False)
     dataloader = DataLoader(dataset, batch_size=config['inference_batch'], shuffle=False)
+
+
 
     print("\n📠 Extracting Features ...")
     embeddings = extraction_model.get_embeddings(dataloader)

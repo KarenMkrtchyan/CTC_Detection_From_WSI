@@ -111,6 +111,58 @@ class Segmenter:
         
         return masks
 
+    def get_cell_crops(self, masks, images):
+        """
+        Extracts cropped cell images using the segmented masks.
+
+        Arguments:
+            masks (np.ndarray): Array of segmented masks with shape (N, H, W).
+            images (np.ndarray): Array of original images with shape (N, H, W).
+
+        Returns:
+            List[np.ndarray]: List of cropped cell images.
+        """
+
+        # plan 
+        # loop through image and get the index of all pixels that mattch the current cell instance. 
+        # for each cell instance, find the leftmost, rightmost, topmost, bottommost pixels
+            # optimization: stop looking after there is a row with no target pixels in it after findind the first 
+            # row with pixels 
+        # find the leftmost, rightmost, topmost, bottommost pixels of the cell instance
+        # find the center using the boundries 
+        # go 37.5 pixcels in each direction from the center to get the crop
+        # return the crops as a list of numpy arrays
+        
+        crops = np.array()
+
+        for image in images:
+            for i in range(1, np.max(masks)):
+                center = self.find_center(masks[i-1], i)
+                crop = image[:, center-38:center+36, center-38:center+36]
+                crops.append(crop)
+
+        return crops
+
+    def find_center(self, mask, index):
+        left = 2000
+        right = 0
+        top = 2000
+        bottom = 0
+        for x in range(len(mask)): # TODO make search 'smart' by ending soon and starting later. Could also use pooling to speed up search
+            for y in range(len(mask[0])):
+                if mask[x,y] == index:
+                    if x < left:
+                        left = x
+                    if x > right:
+                        right = x
+                    if y < top:
+                        top = y
+                    if y > bottom:
+                        bottom = y
+
+        return ( (left+right)/2, (top+bottom)/2 )
+                        
+
 class Config:
     def __init__(self, pretrained_model, device, data_dir, image_extension, mask_output_dir, offset,
                  save_masks):

@@ -131,36 +131,94 @@ class Segmenter:
         # find the leftmost, rightmost, topmost, bottommost pixels of the cell instance
         # find the center using the boundries 
         # go 37.5 pixcels in each direction from the center to get the crop
+        # set all pixels other than the crop to 0
         # return the crops as a list of numpy arrays
-        
-        crops = np.array()
 
-        for image in images:
-            for i in range(1, np.max(masks)):
-                center = self.find_center(masks[i-1], i)
-                crop = image[:, center-38:center+36, center-38:center+36]
+        crops = []
+
+        for j in range(len(images)):
+            print(f"Processing image {j}/{len(images)}")
+            for i in range(1, np.max(masks[j])):
+                center = self.find_center(masks[j], i) # takes a fat minute
+                crop = self.crop_from_center(center, images[j])
+                crop = self.multiplex_mask_on_crop(crop, masks[j], i, center)
                 crops.append(crop)
 
-        return crops
+        return np.array(crops)
+    
+    def multiplex_mask_on_crop(self, crop, mask, index, center): # TODO: pass these all by referance
+        # plan
+        # go to top left corner of the mask according to the index
+        # loop through the mask and find all pixels that match the index
+        # set all pixels that do not match the index to 0 in the crop
+        
+        for h in range(len(crop)):
+            for w in range(len(crop[0])):
+                if(mask[h+center[0]-38, w+center[1]-38] != index):
+                    crop[h, w] = np.array([0, 0, 0], dtype=np.uint16)
+
+        return crop
+
+    def crop_from_center(self, center, image):
+        left = 0 # slighly assymetric, the left gets 38 pixels while the right gets 37 pixels
+        right = 75
+        bottom = 0
+        top = 75
+        if(center[0]>38): # Make sure x is not out of range
+            if(center[0]<image.shape[0]-38):
+                left += center[0]
+                right += center[0]
+            else:
+                left = image.shape[0]-38
+                right = image.shape[0]
+
+        if(center[1]>38): # Make sure y is not out of range
+            if(center[1]<image.shape[1]-38):
+                bottom += center[1]
+                top += center[1]
+            else:
+                bottom = image.shape[1]-38
+                top = image.shape[1]
+        
+        return(image[left:right, bottom:top, :])        
 
     def find_center(self, mask, index):
         left = 2000
         right = 0
         top = 2000
         bottom = 0
-        for x in range(len(mask)): # TODO make search 'smart' by ending soon and starting later. Could also use pooling to speed up search
-            for y in range(len(mask[0])):
-                if mask[x,y] == index:
-                    if x < left:
-                        left = x
-                    if x > right:
-                        right = x
-                    if y < top:
-                        top = y
-                    if y > bottom:
-                        bottom = y
 
-        return ( (left+right)/2, (top+bottom)/2 )
+        seen_a_target_pixel = False
+        for h in range(len(mask)): # TODO optimize
+            seen_frist_pixel = False
+            for w in range(len(mask[0])):
+                if mask[h,w] == index:
+                    seen_frist_pixel = True
+                    seen_a_target_pixel = True
+                    if w < left:
+                        left = w
+                    if w > right:
+                        right = w
+                    if h < top:
+                        top = h
+                    if h > bottom:
+                        bottom = h
+                if seen_frist_pixel and mask[h,w] != index: # stop looking for pixels in this row
+                    break
+            if seen_a_target_pixel and not seen_frist_pixel:
+                break # Found the whole cell, no need to look further
+            
+
+        if left > len(mask[0])-75:
+            RuntimeError("Crop left boundry not possible")
+        if right < 75:
+            RuntimeError("Crop right boundry not possible")
+        if top > len(mask)-75:
+            RuntimeError("Crop top boundry not possible")
+        if bottom < 75:
+            RuntimeError("Crop bottom boundry not possible")
+            
+        return (int((top+bottom)/2),  int((left+right)/2))
                         
 
 class Config:

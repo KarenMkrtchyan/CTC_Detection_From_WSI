@@ -146,7 +146,8 @@ class Segmenter:
 
         return np.array(crops)
     
-    def multiplex_mask_on_crop(self, crop, mask, index, center): # TODO: pass these all by referance
+    def multiplex_mask_on_crop(self, crop, mask, index, center): 
+
         # plan
         # go to top left corner of the mask according to the index
         # loop through the mask and find all pixels that match the index
@@ -154,7 +155,7 @@ class Segmenter:
         
         for h in range(len(crop)):
             for w in range(len(crop[0])):
-                if(mask[h+center[0]-38, w+center[1]-38] != index):
+                if(mask[h+center[0]-38, w+center[1]-38] != index) and (mask[h+center[0]-37, w+center[1]-37] != index): # there is a sight worry that i'm not matching the crop to mask pixel id perfectly, the extra if statement might be a temp fix 
                     crop[h, w] = np.array([0, 0, 0], dtype=np.uint16)
 
         return crop

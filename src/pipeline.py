@@ -47,8 +47,6 @@ def main():
     dataset = CustomImageDataset(images, masks, labels=np.zeros(images.shape[0]), tran=False)
     dataloader = DataLoader(dataset, batch_size=config['inference_batch'], shuffle=False)
 
-
-
     print("\n📠 Extracting Features ...")
     embeddings = extraction_model.get_embeddings(dataloader)
     embeddings = embeddings.numpy()

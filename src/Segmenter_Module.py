@@ -140,6 +140,9 @@ class Segmenter:
             print(f"Processing image {j}/{len(images)}")
             for i in range(1, np.max(masks[j])):
                 center = self.find_center(masks[j], i) # takes a fat minute
+                if(center[0] < 38 or center[1] < 38 or center[0] > images[j].shape[0]-38 or center[1] > images[j].shape[1]-38):
+                    continue # skip edge cells because they are kind of gross 
+
                 crop = self.crop_from_center(center, images[j])
                 crop = self.multiplex_mask_on_crop(crop, masks[j], i, center)
                 crops.append(crop)
@@ -181,7 +184,7 @@ class Segmenter:
                 bottom = image.shape[1]-38
                 top = image.shape[1]
         
-        return(image[left:right, bottom:top, :])        
+        return np.copy(image[left:right, bottom:top, :])        
 
     def find_center(self, mask, index):
         left = 2000

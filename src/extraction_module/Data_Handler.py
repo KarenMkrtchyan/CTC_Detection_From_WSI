@@ -33,15 +33,8 @@ class CustomImageDataset(Dataset):
         """
 
         # image - > 5 channels: dapi, ck, cd45, fitc, mask with shape  (N, 4, 75, 75).
-        offset = 10 # For sample data 
-        dapi = images[:offset] # these are all curently 10044*1362
-        ck = images[offset:2*offset]
-        cd45 = images[2*offset:3*offset]
-        fitc = images[3*offset:4*offset]
-        self.images = np.stack((dapi, ck, cd45, fitc), axis=1)
-
-        self.masks = np.zeros((masks.shape[0], 1, masks.shape[1], masks.shape[2])) # Masks should be of shape (N, 1, 75, 75) how would i get 75? 
-        self.masks[:, 0, :, :] = masks  
+        self.images = images        
+        self.masks =  masks  
         self.labels = labels
         self.tran = tran
 

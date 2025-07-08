@@ -11,6 +11,7 @@ class Extractor:
         self.model = CL(in_channels=5, h_dim=128, projection_dim=64)  # Instantiate the model
         state_dict = torch.load(model_path, map_location=self.device)['model_state_dict']
         self.model.load_state_dict(state_dict) 
+        self.model.to(self.device)  # Ensure model is on the right device
         self.model.eval()
 
     

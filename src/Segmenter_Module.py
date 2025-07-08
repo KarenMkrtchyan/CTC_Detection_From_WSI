@@ -63,10 +63,10 @@ class Segmenter:
         fitc = fitc.astype(np.float32)
 
         rgb = np.zeros((dapi.shape[0], dapi.shape[1], 3), dtype='float')
-        
+
         rgb[...,0] = ck+fitc
         rgb[...,1] = cd45+fitc
-        rgb[...,2] = dapi.astype(np.float32)+fitc 
+        rgb[...,2] = dapi.astype(np.float32)+fitc  # why is there a random np.float32 here?
         rgb[rgb > max_val] = max_val # Clips overflow 
 
         rgb = rgb.astype(dtype)
@@ -91,6 +91,8 @@ class Segmenter:
             frames.append(self.get_composite(image0, image1, image2, image3))  
 
         return frames
+    
+    
     
     def segment_frames(self, frames):
         return self.model.eval(frames,diameter=15,channels=[0, 0]) # test if pasing all the frames at once or one at a time is faster 
@@ -140,15 +142,16 @@ class Segmenter:
             print(f"Processing image {j}/{len(images)}")
             for i in range(1, np.max(masks[j])):
                 center = self.find_center(masks[j], i)
-                if(center[0] < 38 or center[1] < 38 or center[0] > images[j].shape[0]-38 or center[1] > images[j].shape[1]-38):
+                if(center[0] < 38 or center[1] < 38 or center[0] > images[j].shape[1]-38 or center[1] > images[j].shape[2]-38):
                     continue # skip edge cells because they are kind of gross 
 
-                crop = self.crop_from_center(center, images[j])
+                crop = self.crop_img_from_center(center, images[j])
                 crop = self.multiplex_mask_on_crop(crop, masks[j], i, center)
                 image_crops.append(crop)
-                mask_crops.append(self.crop_from_center(center, masks[j]))
+                mask_crops.append(self.crop_mask_from_center(center, masks[j]))
 
-        return np.array(image_crops), np.array(masks) # return the crops and the masks, the masks are used for debugging and visualization purposes only
+        
+        return np.array(image_crops), self.binary_masks(mask_crops) # return the crops and the masks, the masks are used for debugging and visualization purposes only
     
     def multiplex_mask_on_crop(self, crop, mask, index, center): 
 
@@ -160,11 +163,34 @@ class Segmenter:
         for h in range(len(crop)):
             for w in range(len(crop[0])):
                 if(mask[h+center[0]-38, w+center[1]-38] != index) and (mask[h+center[0]-37, w+center[1]-37] != index): # there is a sight worry that i'm not matching the crop to mask pixel id perfectly, the extra if statement might be a temp fix 
-                    crop[h, w] = np.array([0, 0, 0], dtype=np.uint16)
+                    crop[:, h, w] = 0
 
         return crop
 
-    def crop_from_center(self, center, image):
+    def crop_img_from_center(self, center, image):
+        left = 0 # slighly assymetric, the left gets 38 pixels while the right gets 37 pixels
+        right = 75
+        bottom = 75
+        top = 0
+        if(center[0]>38): # Make sure h is not out of range
+            if(center[0]<image.shape[1]-38):
+                top = center[0] - 38
+                bottom = center[0] + 37
+            else:
+                top = image.shape[1]-75
+                bottom = image.shape[1]
+
+        if(center[1]>38): # Make sure w is not out of range
+            if(center[1]<image.shape[2]-38):
+                left = center[1] - 38
+                right = center[1] + 37
+            else:
+                left = image.shape[2]-75
+                right = image.shape[2]
+        
+        return np.copy(image[:, top:bottom, left:right]) # For images
+
+    def crop_mask_from_center(self, center, image):
         left = 0 # slighly assymetric, the left gets 38 pixels while the right gets 37 pixels
         right = 75
         bottom = 75
@@ -184,11 +210,8 @@ class Segmenter:
             else:
                 left = image.shape[1]-75
                 right = image.shape[1]
-        
-        if len(image.shape) == 3:
-            return np.copy(image[top:bottom, left:right, :]) # For images
-        else:
-            return np.copy(image[top:bottom, left:right]) # For masks
+
+        return np.copy(image[top:bottom, left:right]) # For masks
 
     def find_center(self, mask, index):
         positions = np.argwhere(mask == index)
@@ -203,7 +226,20 @@ class Segmenter:
 
         return int((top + bottom) / 2), int((left + right) / 2)
 
-                        
+    def binary_masks(self, masks):
+        """
+        Takes an np.array (shape N, 75, 75) with instance values and converts it to a np.array (shape N, 1, 75, 75)
+        with 1 or 0 in the second dimension to indicate mask or no mask.
+        Any nonzero value in the original mask is set to 1.
+        """
+        # Ensure input is a numpy array
+        masks = np.asarray(masks)
+        # Create binary masks: 1 where mask > 0, else 0
+        binary = (masks > 0).astype(np.uint8)
+        # Add a channel dimension (axis=1)
+        binary = binary[:, np.newaxis, :, :]
+        return binary
+        
 
 class Config:
     def __init__(self, pretrained_model, device, data_dir, image_extension, mask_output_dir, offset,

@@ -238,6 +238,7 @@ class Encoder(nn.Module):
         Returns:
             torch.Tensor: Latent feature representation of shape (batch_size, output_features).
         """
+
         # First block: Conv -> BN -> ReLU -> Pool
         x = F.relu(self.bn1(self.conv1(x)))  # 75 x 75 x 5 -> 75 x 75 x 32
         x = self.pool(x)                    # 75 x 75 x 32 -> 37 x 37 x 32
@@ -261,6 +262,4 @@ class Encoder(nn.Module):
         x = torch.flatten(x, 1)             # Flatten the 1x1x256 to a 256-dimensional vector
         x = self.fc(x)                      # Final feature representation (batch_size, output_features)
 
-        return x
-
-    
+        return x 

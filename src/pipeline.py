@@ -6,6 +6,8 @@ from extraction_module.Data_Handler import CustomImageDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import pandas as pd
+import umap
+import matplotlib.pyplot as plt
 
 def main():
     with open(Path('./src/config.yaml'), 'r') as file:
@@ -44,7 +46,6 @@ def main():
     cd45 = images[2*offset:3*offset]
     fitc = images[3*offset:4*offset]
     images = np.stack((dapi, ck, cd45, fitc), axis=1) # N 4 H W 
-
     
     image_crops, mask_crops = segmentor_model.get_cell_crops(masks, images)
     del images
@@ -71,17 +72,32 @@ def main():
 
     print("\n📠 Extracting Features ...")
     embeddings = extraction_model.get_embeddings(dataloader)
-    embeddings = embeddings.numpy()
+    embeddings_np = embeddings.cpu().numpy()
 
-    embeddings_df = pd.DataFrame(
-        embeddings.astype('float16'),
-        columns=[f'z{i}' for i in range(embeddings.shape[1])])
+    reducer = umap.UMAP(n_components=2, random_state=42)
+    embeddings_2d = reducer.fit_transform(embeddings_np)
+
+    # Plot
+    plt.figure(figsize=(8,6))
+    plt.scatter(embeddings_2d[:,0], embeddings_2d[:,1], cmap='Spectral', s=5)
+    plt.title("UMAP projection of embeddings")
+    plt.xlabel("UMAP-1")
+    plt.ylabel("UMAP-2")
+    plt.colorbar()
+    plt.show()
+
+    # embeddings_df = pd.DataFrame(
+    #     embeddings.astype('float16'),
+    #     columns=[f'z{i}' for i in range(embeddings.shape[1])])
     
     # features = pd.concat([features, embeddings_df], axis=1) 
     # feautres all over the orignial code, but idk what is it for. this is just a reminder to think about including it 
+
+    # index for every event slide id, frame id, cell (x, y)
+    # numpy array from embedding from event htff hirarchical storage 
+    # store all that
 
     print("Its over")
 
 if __name__ == "__main__":
     main()
-

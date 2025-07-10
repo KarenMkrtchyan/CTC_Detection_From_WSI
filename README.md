@@ -7,3 +7,10 @@ conda activate cellpose
 
 ## Install reqs
 python -m pip install -r requirements.txt 
+
+## Run
+cd to root directory
+update config.yaml as needed
+in pipeline.py, if using sample data, the offset should be 10 (or whatever number of sample images is used)
+run `python pipeline.py`
+check data/processed for embeddings for each cell found in the slide

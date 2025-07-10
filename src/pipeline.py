@@ -47,7 +47,7 @@ def main():
     fitc = images[3*offset:4*offset]
     images = np.stack((dapi, ck, cd45, fitc), axis=1) # N 4 H W 
     
-    image_crops, mask_crops = segmentor_model.get_cell_crops(masks, images)
+    image_crops, mask_crops, centers = segmentor_model.get_cell_crops(masks, images)
     del images
 
     print("\n📠 Doing all the data loader nonsense ...")
@@ -74,28 +74,27 @@ def main():
     embeddings = extraction_model.get_embeddings(dataloader)
     embeddings_np = embeddings.cpu().numpy()
 
-    reducer = umap.UMAP(n_components=2, random_state=42)
-    embeddings_2d = reducer.fit_transform(embeddings_np)
+    # --- FOR DEBUG ---
 
-    # Plot
-    plt.figure(figsize=(8,6))
-    plt.scatter(embeddings_2d[:,0], embeddings_2d[:,1], cmap='Spectral', s=5)
-    plt.title("UMAP projection of embeddings")
-    plt.xlabel("UMAP-1")
-    plt.ylabel("UMAP-2")
-    plt.colorbar()
-    plt.show()
+    # reducer = umap.UMAP(n_components=2, random_state=42)
+    # embeddings_2d = reducer.fit_transform(embeddings_np)
+    # plt.figure(figsize=(8,6))
+    # plt.scatter(embeddings_2d[:,0], embeddings_2d[:,1], cmap='Spectral', s=5)
+    # plt.title("UMAP projection of embeddings")
+    # plt.xlabel("UMAP-1")
+    # plt.ylabel("UMAP-2")
+    # plt.colorbar()
+    # plt.show()
 
-    # embeddings_df = pd.DataFrame(
-    #     embeddings.astype('float16'),
-    #     columns=[f'z{i}' for i in range(embeddings.shape[1])])
+    embeddings_df = pd.DataFrame(
+        embeddings_np.astype('float16'),
+        columns=[f'z{i}' for i in range(embeddings.shape[1])])
     
-    # features = pd.concat([features, embeddings_df], axis=1) 
-    # feautres all over the orignial code, but idk what is it for. this is just a reminder to think about including it 
+    embeddings_df.insert(0, "slide id", 0)
+    embeddings_df.insert(1, "center_x", centers[:, 0])
+    embeddings_df.insert(2, "center_y", centers[:, 1])
 
-    # index for every event slide id, frame id, cell (x, y)
-    # numpy array from embedding from event htff hirarchical storage 
-    # store all that
+    embeddings_df.to_parquet("data/processed/embeddings.parquet.gzip", compression="gzip")
 
     print("Its over")
 

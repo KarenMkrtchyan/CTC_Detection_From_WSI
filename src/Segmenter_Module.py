@@ -138,6 +138,7 @@ class Segmenter:
 
         image_crops = []
         mask_crops = []
+        centers = []
         for j in range(len(images)):
             print(f"Processing image {j}/{len(images)}")
             for i in range(1, np.max(masks[j])):
@@ -145,13 +146,14 @@ class Segmenter:
                 if(center[0] < 38 or center[1] < 38 or center[0] > images[j].shape[1]-38 or center[1] > images[j].shape[2]-38):
                     continue # skip edge cells because they are kind of gross 
 
+                centers.append(center)
                 crop = self.crop_img_from_center(center, images[j])
                 crop = self.multiplex_mask_on_crop(crop, masks[j], i, center)
                 image_crops.append(crop)
                 mask_crops.append(self.crop_mask_from_center(center, masks[j]))
 
         
-        return np.array(image_crops), self.binary_masks(mask_crops) # return the crops and the masks, the masks are used for debugging and visualization purposes only
+        return np.array(image_crops), self.binary_masks(mask_crops), np.array(centers) # return the crops and the masks, the masks are used for debugging and visualization purposes only
     
     def multiplex_mask_on_crop(self, crop, mask, index, center): 
 

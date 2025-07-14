@@ -4,7 +4,8 @@ from pathlib import Path
 import os
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt # use in debug console 
+import matplotlib.pyplot as plt # use in debug console
+import multiprocessing 
 
 class Segmenter:
     def __init__(self, pretrained_model, 
@@ -36,19 +37,19 @@ class Segmenter:
         self.model = models.CellposeModel(gpu = True, 
                                           pretrained_model=str(self.config.pretrained_model), 
                                           device=torch.device(self.config.device))
+    @staticmethod
+    def _load_img(args):
+        folder, filename = args
+        full_path = os.path.join(folder,filename)
+        return cv2.imread(full_path, cv2.IMREAD_GRAYSCALE)
 
     def load_images(self, image_dir):
         """Load images from the specified directory, and return a list of images as numpy arrays."""
         image_files = sorted(os.listdir(image_dir)) # list index must match the order of scans 
 
-        frames = []
-        for image_file in image_files:
-            image = cv2.imread(Path(image_dir, image_file), cv2.IMREAD_GRAYSCALE)
-            image = (image*257).astype(np.uint16)  # Convert 8-bit to 16-bit
-            # image = image.astype(np.float32)
-            # image = image * 255 # convert from 8-bit to 16-bit
-            # image = image.astype(np.uint16) # convert to 16-bit unsigned integer
-            frames.append(image)
+        with multiprocessing.Pool(multiprocessing.cpu_count() - 2) as p: # save one core for the system and one more for good luck
+            args = [(image_dir, f) for f in image_files]
+            frames = p.map(Segmenter._load_img, args)
 
         return np.array(frames, dtype=np.uint16) # and if i wasn't clear its 16 bit
     

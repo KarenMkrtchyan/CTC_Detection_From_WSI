@@ -91,9 +91,7 @@ class Segmenter:
             image3 = images[i+3*offset] 
             frames.append(self.get_composite(image0, image1, image2, image3))  
 
-        return frames
-    
-    
+        return frames 
     
     def segment_frames(self, frames):
         return self.model.eval(frames,diameter=15,channels=[0, 0]) # test if pasing all the frames at once or one at a time is faster 
@@ -125,17 +123,6 @@ class Segmenter:
         Returns:
             List[np.ndarray]: List of cropped cell images.
         """
-
-        # plan 
-        # loop through image and get the index of all pixels that mattch the current cell instance. 
-        # for each cell instance, find the leftmost, rightmost, topmost, bottommost pixels
-            # optimization: stop looking after there is a row with no target pixels in it after findind the first 
-            # row with pixels 
-        # find the leftmost, rightmost, topmost, bottommost pixels of the cell instance
-        # find the center using the boundries 
-        # go 37.5 pixcels in each direction from the center to get the crop
-        # set all pixels other than the crop to 0
-        # return the crops as a list of numpy arrays
 
         image_crops = []
         mask_crops = []

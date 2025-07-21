@@ -35,3 +35,4 @@ class Extractor:
         # Concatenate all embedding tensors
         embeddings = torch.cat(embeddings)
         return embeddings
+

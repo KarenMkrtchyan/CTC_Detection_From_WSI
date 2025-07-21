@@ -73,7 +73,14 @@ def main():
     # how to set up repo (strucutre/filenames) traditional and deep learning modules
     # so we dont interferece with each other 
     # abc programing folder structure, naming, cli commands,
-    # rest of the phd students for desktop dlx amin calendar-supports 3 ppl at a time    
+    # rest of the phd students for desktop dlx amin calendar-supports 3 ppl at a time 
+       
+    # abstract base class to classifer and shi but lowkey kinda fried if u ask me 
+    # init function
+    # prediction -> argmax
+    # proabilites -> array
+
+    # pass in df and get an array of outputs 
 
     print("\nPipeline finished\n")
 

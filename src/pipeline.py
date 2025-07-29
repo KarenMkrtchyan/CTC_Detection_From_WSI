@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from Segmenter_Module import Segmenter
+from src.segmentation_module.Segmenter import Segmenter
 from extraction_module.Extraction_Module import Extractor
 from extraction_module.Data_Handler import CustomImageDataset
 from torch.utils.data import DataLoader
@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import umap
 import matplotlib.pyplot as plt
+import multiprocessing
 
 def main():
     with open(Path('./src/config.yaml'), 'r') as file:
@@ -47,7 +48,7 @@ def main():
     fitc = images[3*offset:4*offset]
     images = np.stack((dapi, ck, cd45, fitc), axis=1) # Nx4xHxW 
     
-    image_crops, mask_crops, centers = segmentor_model.get_cell_crops(masks, images)
+    image_crops, mask_crops, centers = segmentor_model.get_cell_crops_multiproc(masks, images)
     del images
 
     print("\n📠 Doing all the data loader nonsense ...")
@@ -81,6 +82,11 @@ def main():
     # proabilites -> array
 
     # pass in df and get an array of outputs 
+    # load multiple cellpose models into vram mem 32 threads 
+    # make it blazing fast 
+
+    # or use like a million threads to load all of the inputs into the model in one shot and take 5 seconds but need to fuck with cellpose code in that case
+
 
     print("\nPipeline finished\n")
 

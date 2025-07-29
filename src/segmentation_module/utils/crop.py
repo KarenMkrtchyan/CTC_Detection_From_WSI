@@ -1,6 +1,6 @@
 import numpy as np
 
-def process_single_image(args):
+def crop_single_image(args):
     """
     Util function for each worker in a multiprocessing tool. Takes in an image and returns an cropped cells, cropped masks, and (y, x) center of 
     each cell

@@ -9,7 +9,7 @@ from segmentation_module.Base import BaseSegmenter
 from segmentation_module.utils.config import Config
 from segmentation_module.utils.loader import load_img
 from segmentation_module.utils.image import compute_composite
-from segmentation_module.utils.crop import find_center, crop_img_from_center, multiplex_mask_on_crop, crop_mask_from_center, process_single_image
+from segmentation_module.utils.crop import find_center, crop_img_from_center, multiplex_mask_on_crop, crop_mask_from_center, crop_single_image
 from segmentation_module.utils.mask import binary_masks
 
 class Segmenter(BaseSegmenter):
@@ -138,7 +138,7 @@ class Segmenter(BaseSegmenter):
         ]
 
         with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 2)) as pool:
-            results = pool.map(process_single_image, args)
+            results = pool.map(crop_single_image, args)
 
         # Flatten results
         image_crops, mask_crops, centers = [], [], []
@@ -152,9 +152,9 @@ class Segmenter(BaseSegmenter):
         del self.masks
 
         return (
-            np.array(image_crops),
-            np.array(binary_masks(mask_crops)),
-            np.array(centers)
+            np.stack(image_crops, axis = 0),
+            np.array(binary_masks(np.stack(mask_crops), axis=0)),
+            np.stack(centers, axis=0)
         )
 
     def load_data(self, image_dir):

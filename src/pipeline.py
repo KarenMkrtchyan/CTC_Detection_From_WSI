@@ -1,14 +1,12 @@
 import yaml
 from pathlib import Path
-from src.segmentation_module.Segmenter import Segmenter
+from segmentation_module.Segmenter import Segmenter
 from extraction_module.Extraction_Module import Extractor
 from extraction_module.Data_Handler import CustomImageDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import pandas as pd
-import umap
-import matplotlib.pyplot as plt
-import multiprocessing
+
 
 def main():
     with open(Path('./src/config.yaml'), 'r') as file:
@@ -21,40 +19,27 @@ def main():
                       image_extension=config['image_extension'],
                       output_dir=config['output_dir'],
                       offset=config['offset'],
-                      save_masks=config['save_masks']
-                      )
-    
+                      )   
+        
+    print("\n📠 Segmenting frames in directory: ", config['data_dir'])
+    segmentor_model.load_data(Path(config['data_dir'])) # TODO: Run this on multiple cores
+    print("\n📠 Combining 4 scans into 1 image ...")
+    segmentor_model.preprocess()
+    print("\n📠 Computing masks ...")
+    segmentor_model.segment()
+    print("\n📠 Cropping images ...")
+    image_crops, mask_crops, centers = segmentor_model.postprocess()
+    del segmentor_model
+
+    print("\n📠 Preping segmentation output for extraction input ...")
+    dataset = CustomImageDataset(image_crops, mask_crops, labels=np.zeros(image_crops.shape[0]), tran=False)
+    dataloader = DataLoader(dataset, batch_size=config['inference_batch'], shuffle=False)
+
     extraction_model = Extractor(
         model_path=config['extraction_model'],
         device=config['device']
     )
-        
-    print("\n📠 Segmenting frames in directory:")
-    images = segmentor_model.load_images(Path(config['data_dir'])) # TODO: Run this on multiple cores
-
-    print("\n📠 Combining 4 scans into 1 image ...")
-    frames=segmentor_model.combine_images(images) # TODO: make blazingly fast
-
-    print("\n📠 Computing masks ...")
-    masks, _, _ = segmentor_model.segment_frames(frames)
-    masks = np.array(masks)
-    del frames
-    print("\n📠 Cropping images ...")
-
-    offset = 10 # for sample data 10, set to config['offset'] for actual run
-    dapi = images[:offset]
-    ck = images[offset:2*offset]
-    cd45 = images[2*offset:3*offset]
-    fitc = images[3*offset:4*offset]
-    images = np.stack((dapi, ck, cd45, fitc), axis=1) # Nx4xHxW 
     
-    image_crops, mask_crops, centers = segmentor_model.get_cell_crops_multiproc(masks, images)
-    del images
-
-    print("\n📠 Doing all the data loader nonsense ...")
-    dataset = CustomImageDataset(image_crops, mask_crops, labels=np.zeros(image_crops.shape[0]), tran=False)
-    dataloader = DataLoader(dataset, batch_size=config['inference_batch'], shuffle=False)
-
     print("\n📠 Extracting Features ...")
     embeddings = extraction_model.get_embeddings(dataloader)
     embeddings_np = embeddings.cpu().numpy()

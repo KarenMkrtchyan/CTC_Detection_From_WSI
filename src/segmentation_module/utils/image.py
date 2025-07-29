@@ -1,6 +1,6 @@
 import numpy as np
 
-def compute_composite(self, dapi, ck, cd45, fitc):
+def compute_composite(dapi, ck, cd45, fitc):
 
     dtype = dapi.dtype
     max_val = np.iinfo(dapi.dtype).max

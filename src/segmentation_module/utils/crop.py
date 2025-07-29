@@ -47,7 +47,7 @@ def crop_img_from_center(center, image):
 
 def multiplex_mask_on_crop(crop, mask, index, center): 
 
-    for h in range(len(crop)):
+    for h in range(len(crop)): # O(n^2)
         for w in range(len(crop[0])):
             if(mask[h+center[0]-38, w+center[1]-38] != index) and (mask[h+center[0]-37, w+center[1]-37] != index): # there is a sight worry that i'm not matching the crop to mask pixel id perfectly, the extra if statement might be a temp fix 
                 crop[:, h, w] = 0
@@ -78,7 +78,7 @@ def crop_mask_from_center(center, image):
     return np.copy(image[top:bottom, left:right]) # For masks
 
 def find_center(mask, index):
-    positions = np.argwhere(mask == index)
+    positions = np.argwhere(mask == index) # O(nlogn)
 
     if positions.size == 0:
         raise ValueError(f"No pixels found for index {index}")

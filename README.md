@@ -3,11 +3,14 @@ Pipeline for detecting circulating tumor cells from whole slide blood microscopy
 Has modules for loading in individual scans, segmenting and croping cells, and extracting features embeddings for downstream tasks
 
 ## Conda env
+```
 conda create --name cellpose python=3.10
 conda activate cellpose
-
+```
 ## Install reqs
+```
 python -m pip install -r requirements.txt 
+```
 
 ## Run
 cd to root directory

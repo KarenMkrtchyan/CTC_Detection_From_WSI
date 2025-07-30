@@ -2,7 +2,8 @@ import yaml
 from pathlib import Path
 from segmentation_module.Segmenter import Segmenter
 from extraction_module.Extraction_Module import Extractor
-from extraction_module.Data_Handler import CustomImageDataset
+from downtream_tasks.spikein.SpikeIn import SpikeIn
+from extraction_module.data.Data_Handler import CustomImageDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import pandas as pd
@@ -31,17 +32,6 @@ def main():
     image_crops, mask_crops, centers = segmentor_model.postprocess()
     del segmentor_model
 
-    """
-    issue 
-
-    mask_crops.shape
-        (5701, 1, 75, 75)
-    image_crops.shape
-        (5701, 75, 75, 4)
-    """
-
-
-
     print("\n📠 Preping segmentation output for extraction input ...")
     dataset = CustomImageDataset(image_crops, mask_crops, labels=np.zeros(image_crops.shape[0]), tran=False)
     dataloader = DataLoader(dataset, batch_size=config['inference_batch'], shuffle=False)
@@ -52,39 +42,41 @@ def main():
     )
     
     print("\n📠 Extracting Features ...")
-    embeddings = extraction_model.get_embeddings(dataloader)
+    embeddings = extraction_model.extract(dataloader)
     embeddings_np = embeddings.cpu().numpy()
 
+    print("\n🔍 Predicting cell types ...")
+    predictions = []
+    probabilities = []
+
+    spikein_model = SpikeIn(model_path=config['spikein_model'])
+
+    for embedding in embeddings_np:
+        pred = spikein_model.prediction(embedding)
+        prob = spikein_model.probability(embedding)
+        predictions.append(pred)
+        probabilities.append(prob)
+
+    probabilities = np.array(probabilities)  
+    predictions = np.array(predictions)
+
+
     print("\n📠 Saving Features ...")
-    embeddings_df = pd.DataFrame(
+    results = pd.DataFrame(
         embeddings_np.astype('float16'),
         columns=[f'z{i}' for i in range(embeddings.shape[1])])
     
-    embeddings_df.insert(0, "slide id", 0)
-    embeddings_df.insert(1, "center_x", centers[:, 0])
-    embeddings_df.insert(2, "center_y", centers[:, 1])
+    results.insert(0, "slide id", 0)
+    results.insert(1, "center_x", centers[:, 0])
+    results.insert(2, "center_y", centers[:, 1])
+    results.insert(3, "pred", predictions)
+    results.insert(4, "prob1", probabilities[:, 0])
+    results.insert(5, "prob2", probabilities[:, 1])
+    results.insert(6, "prob3", probabilities[:, 2])
 
-    embeddings_df.to_parquet("data/processed/embeddings.parquet.gzip", compression="gzip")
+    results.to_parquet("data/processed/embeddings_with_pred.parquet.gzip", compression="gzip")
 
-    # now feed this to event characterization - Rafael 
-    # how to set up repo (strucutre/filenames) traditional and deep learning modules
-    # so we dont interferece with each other 
-    # abc programing folder structure, naming, cli commands,
-    # rest of the phd students for desktop dlx amin calendar-supports 3 ppl at a time 
-       
-    # abstract base class to classifer and shi but lowkey kinda fried if u ask me 
-    # init function
-    # prediction -> argmax
-    # proabilites -> array
-
-    # pass in df and get an array of outputs 
-    # load multiple cellpose models into vram mem 32 threads 
-    # make it blazing fast 
-
-    # or use like a million threads to load all of the inputs into the model in one shot and take 5 seconds but need to fuck with cellpose code in that case
-
-
-    print("\nPipeline finished\n")
+    print("\n Pipeline finished \n")
 
 if __name__ == "__main__":
     main()

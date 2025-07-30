@@ -126,9 +126,6 @@ class Segmenter(BaseSegmenter):
         if not images:
             images = self.stacked_scans_data
 
-        # multiprocessing.set_start_method('spawn', force=True)
-
-        # Prepare arguments for each image/mask pair
         args = [
             (
                 masks[j], images[j],

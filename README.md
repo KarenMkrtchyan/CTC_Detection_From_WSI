@@ -44,3 +44,7 @@ project/
 
 ├── requirements.txt            # pip install me  
 ```
+
+## Outputs
+
+Look for ```embeddings_with_pred.parquet.zip``` in ```data/processed``` 

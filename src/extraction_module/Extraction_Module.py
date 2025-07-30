@@ -1,9 +1,9 @@
 import torch
-from .Contrastive_Learning import CL
+from .models.Contrastive_Learning import CL
+from .Base import BaseFeatureExtraction
 
-class Extractor:
+class Extractor(BaseFeatureExtraction):
     def __init__(self, model_path, device='cpu'):
-        print("\n📠 Initializing the feature extractor ...")
         if model_path is None:
             raise ValueError("Model must be provided for feature extraction.")
         
@@ -13,9 +13,8 @@ class Extractor:
         self.model.load_state_dict(state_dict) 
         self.model.to(self.device)  # Ensure model is on the right device
         self.model.eval()
-
     
-    def get_embeddings(self, dataloader):
+    def extract(self, dataloader):
         """
         Extract embeddings from the encoder model for a given dataset.
 

@@ -42,5 +42,5 @@ project/
     ├──pipeline.py              # Main file in which all the magic happens
     ├──config.yaml              # Hardcoded constants used in pipeline
 
-├── requirements.txt
+├── requirements.txt            # pip install me  
 ```

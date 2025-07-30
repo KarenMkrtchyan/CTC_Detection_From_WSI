@@ -9,7 +9,7 @@ from segmentation_module.Base import BaseSegmenter
 from segmentation_module.utils.config import Config
 from segmentation_module.utils.loader import load_img
 from segmentation_module.utils.image import compute_composite
-from segmentation_module.utils.crop import find_center, crop_img_from_center, multiplex_mask_on_crop, crop_mask_from_center, crop_single_image
+from segmentation_module.utils.crop import crop_single_image
 from segmentation_module.utils.mask import binary_masks
 
 class Segmenter(BaseSegmenter):
@@ -64,6 +64,7 @@ class Segmenter(BaseSegmenter):
         self.image_data = np.empty(1)
         self.composite_data = np.empty(1)
         self.masks = np.empty(1)
+        self.stacked_scans_data = []
 
     def segment(self, images=None):
         """
@@ -102,15 +103,17 @@ class Segmenter(BaseSegmenter):
             image2 = images[i+2*offset]
             # skip Bright Field scan
             image3 = images[i+3*offset] 
+            stacked = np.stack([image0, image1, image2, image3], axis=-1)
+            self.stacked_scans_data.append(stacked)
             frames.append(compute_composite(image0, image1, image2, image3))  
 
+        self.stacked_scans_data = np.stack(np.delete(self.stacked_scans_data, 0, axis=0), axis =0) # remove the first empty array
         self.composite_data = frames
         return frames 
 
     def postprocess(self, masks=None, images=None):
         """
-        Postprocess the segmentation mask. Extracts cropped cell images using the segmented masks.
-        
+        Postprocess the segmentation mask. Extracts cropped cell images using the segmented masks.       
  
         Arguments:
             masks (np.ndarray): Array of segmented masks with shape (N, H, W).
@@ -121,7 +124,7 @@ class Segmenter(BaseSegmenter):
         if not masks:
             masks = self.masks
         if not images:
-            images = self.composite_data
+            images = self.stacked_scans_data
 
         # multiprocessing.set_start_method('spawn', force=True)
 
@@ -129,10 +132,6 @@ class Segmenter(BaseSegmenter):
         args = [
             (
                 masks[j], images[j],
-                find_center,
-                crop_img_from_center,
-                multiplex_mask_on_crop,
-                crop_mask_from_center
             )
             for j in range(len(images))
         ]
@@ -150,10 +149,11 @@ class Segmenter(BaseSegmenter):
         del self.image_data
         del self.composite_data
         del self.masks
+        del self.stacked_scans_data
 
         return (
             np.stack(image_crops, axis = 0),
-            np.array(binary_masks(np.stack(mask_crops), axis=0)),
+            binary_masks(np.stack((mask_crops), axis=0)),
             np.stack(centers, axis=0)
         )
 
@@ -181,4 +181,3 @@ class Segmenter(BaseSegmenter):
         for i, mask in enumerate(masks):
             mask_path = Path(self.config.mask_output_dir, f"mask_{i}.png")
             cv2.imwrite(mask_path, mask.astype(np.uint16))
-

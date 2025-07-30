@@ -31,6 +31,17 @@ def main():
     image_crops, mask_crops, centers = segmentor_model.postprocess()
     del segmentor_model
 
+    """
+    issue 
+
+    mask_crops.shape
+        (5701, 1, 75, 75)
+    image_crops.shape
+        (5701, 75, 75, 4)
+    """
+
+
+
     print("\n📠 Preping segmentation output for extraction input ...")
     dataset = CustomImageDataset(image_crops, mask_crops, labels=np.zeros(image_crops.shape[0]), tran=False)
     dataloader = DataLoader(dataset, batch_size=config['inference_batch'], shuffle=False)

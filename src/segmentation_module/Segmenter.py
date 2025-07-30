@@ -116,8 +116,8 @@ class Segmenter(BaseSegmenter):
         Postprocess the segmentation mask. Extracts cropped cell images using the segmented masks.       
  
         Arguments:
-            masks (np.ndarray): Array of segmented masks with shape (N, H, W).
-            images (np.ndarray): Array of original images with shape (N, H, W).
+            masks (np.ndarray): Array of segmented masks with shape (N, C, H, W).
+            images (np.ndarray): Array of original images with shape (N, C, H, W).
         Returns:
             List[np.ndarray]: List of cropped cell images.
         """
@@ -152,7 +152,8 @@ class Segmenter(BaseSegmenter):
         del self.stacked_scans_data
 
         return (
-            np.stack(image_crops, axis = 0),
+            np.transpose(np.stack(image_crops, axis = 0), (0,3,1,2)),   # Convert to (N, C, H, W,) because thats what the current extration model expects,
+                                                                        # it is probaly worth a look at why that choice was made and if it can be undone
             binary_masks(np.stack((mask_crops), axis=0)),
             np.stack(centers, axis=0)
         )

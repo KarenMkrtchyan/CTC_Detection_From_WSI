@@ -59,7 +59,7 @@ class Segmenter(BaseSegmenter):
             raise ValueError("Pretrained model must be specified")
       
         self.model = models.CellposeModel(gpu = True, 
-                                          pretrained_model=str(self.config.pretrained_model), 
+                                          pretrained_model=str(self.config.pretrained_model), # ignore *Argument of type "str" cannot be assigned to parameter "pretrained_model" of type "bool"*, cellpose people decided to have the default value = False so python thinks its type bool, but its not
                                           device=torch.device(self.config.device))
         self.image_data = np.empty(1)
         self.composite_data = np.empty(1)
@@ -82,7 +82,7 @@ class Segmenter(BaseSegmenter):
         self.masks, _, _ = self.model.eval(self.composite_data, diameter=15, channels=[0, 0]) 
         return self.masks
         
-    def preprocess(self, images=None):
+    def preprocess(self, images=None) -> np.ndarray:
         """
         Preprocess the loaded input images before segmentation by combining different scan types into a BRG image understood by the segmentation module.
         
@@ -107,11 +107,11 @@ class Segmenter(BaseSegmenter):
             self.stacked_scans_data.append(stacked)
             frames.append(compute_composite(image0, image1, image2, image3))  
 
-        self.stacked_scans_data = np.stack(np.delete(self.stacked_scans_data, 0, axis=0), axis =0) # remove the first empty array
+        self.stacked_scans_data = np.stack(self.stacked_scans_data[1:], axis=0) # remove the first empty array
         self.composite_data = frames
-        return frames 
+        return np.ndarray(frames) 
 
-    def postprocess(self, masks=None, images=None):
+    def postprocess(self, masks=None, images=None) -> list[np.ndarray]:
         """
         Postprocess the segmentation mask. Extracts cropped cell images using the segmented masks.       
  
@@ -149,10 +149,10 @@ class Segmenter(BaseSegmenter):
         del self.stacked_scans_data
 
         return (
-            np.transpose(np.stack(image_crops, axis = 0), (0,3,1,2)),   # Convert to (N, C, H, W,) because thats what the current extration model expects,
+          [  np.transpose(np.stack(image_crops, axis = 0), (0,3,1,2)),   # Convert to (N, C, H, W,) because thats what the current extration model expects,
                                                                         # it is probaly worth a look at why that choice was made and if it can be undone
             binary_masks(np.stack((mask_crops), axis=0)),
-            np.stack(centers, axis=0)
+            np.stack(centers, axis=0)]
         )
 
     def load_data(self, image_dir):

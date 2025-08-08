@@ -2,7 +2,7 @@
 Base class for all deep learning segmentation algorithms.
 """
 from abc import ABC, abstractmethod
-from scipy import ndimage as ndi
+import numpy as np
 
 class BaseSegmenter(ABC):
     """Base class that all deep learning segmentation algorithms should inherit from."""
@@ -28,8 +28,9 @@ class BaseSegmenter(ABC):
             numpy.ndarray: Binary mask where 1 indicates the segmented region.
         """
         pass
-    
-    def preprocess(self, images_dir): # get_composites shouuld be here 
+
+    @abstractmethod
+    def preprocess(self, images) -> np.ndarray: # get_composites shouuld be here 
         """
         Preprocess the input image before segmentation.
         
@@ -41,15 +42,16 @@ class BaseSegmenter(ABC):
         """
         pass
     
-    def postprocess(self, mask):
+    @abstractmethod
+    def postprocess(self, masks=None, images=None) -> list[np.ndarray]:
         """
-        Postprocess the segmentation mask.
-        
-        Args:
-            mask (numpy.ndarray): Segmentation mask to postprocess.
-            
+        Postprocess the segmentation mask. Extracts cropped cell images using the segmented masks.       
+
+        Arguments:
+            masks (np.ndarray): Array of segmented masks with shape (N, C, H, W).
+            images (np.ndarray): Array of original images with shape (N, C, H, W).
         Returns:
-            numpy.ndarray: Postprocessed mask.
+            List[np.ndarray]: List of cropped cell images.
         """
         pass
   

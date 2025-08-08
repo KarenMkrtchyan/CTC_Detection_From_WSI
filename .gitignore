@@ -1,5 +1,4 @@
 # don't publish models or whole data set 
-models/
 data/raw
 data/processed
 
